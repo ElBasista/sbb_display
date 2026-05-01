@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Nicolas Adam</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Single:wght@400&display=swap" rel="stylesheet">
+
+</head>
+<script src="https://unpkg.com/petite-vue" defer init></script>
+<style>
+    body {
+        background-color: black;
+        /*font-family: 'DotGothic16', monospace;*/
+        font-family: 'Bitcount Single', monospace;
+        font-weight: 400;
+    }
+
+    .grid {
+        margin:0;
+        padding:0;
+        color:lightgreen;
+    }
+    .line {
+        width:100%;
+        display: grid;
+        container-type: inline-size;
+        grid-template-columns: 13% 14% 1fr 25%;
+        border-bottom: none;
+        margin-bottom:1%;
+    }
+    .line div {
+        font-size:5cqw;
+        overflow: hidden;
+    }
+    .delay {
+        color:red;
+    }
+
+    .col-when {
+        text-align: right;
+        white-space: nowrap;
+        overflow: visible;
+    }
+    [v-cloak] {
+        visibility: hidden;
+    }
+
+</style>
+
+
+<body>
+<div v-scope="Stationboard()"  v-effect="init()" v-cloak>
+  <ul class="grid">
+    <li v-for="item in departures" class="line">
+        <div class="col-station">
+            {{stations[String(item.stop.station.id)]}}:
+        </div>
+        <div class="col-name">
+            {{ item.category }}{{ item.number }}
+        </div>
+        <div class="col-to">
+            {{ shortenWords(item.to) }} <span v-if="item.stop.platform">(Gl. {{ item.stop.platform }})</span>
+        </div>
+        <div class="col-when">
+            {{ formatTimeLeft(item.stop.departure) }}&rsquo;<span v-if="item.stop.delay > 0" class="delay">+{{ item.stop.delay }}&rsquo;</span>
+        </div>
+    </li>
+  </ul>
+</div>
+
+
+<script>
+    
+//8503001 - Altstetten 
+//8591167 - Grünaustrasse
+//8591402 - Tüffenwies
+//8591434 - Winzerhalde
+//8503000 - Zürich HB
+//8503020 - Hardbrücke
+
+const STATIONS = {
+    "8503001": "Alt", //Altstetten 
+    "8591167": "Gr", //Grünaustrasse
+    "8591402": "Tü"//Tüffenwies
+};
+
+//Station, Type, Number, Next Station
+const CONNECTIONS = [
+    ["8591167","T", 17, "8591402"], //17er GS in direction HB
+    ["8591402","B", 80, "8591434"], //80er TW Richtung Hönggerberg
+    ["8503001","S", 5, "8503020"],  //S5 from Altstetten to HB / Hinwil ns:hardbrücke
+    ["8503001","S", 14, "8503000"], //S14 from Altstetten to HB / Hinwil ns:hb
+];
+
+const ABBREVIATIONS = {
+  "Bahnhof": "Bhf",
+  "Strasse": "Str",
+  "Zentrum": "Zentr",
+  "Hauptbahnhof": "HB"
+};
+
+
+function Stationboard() {
+  return {
+    departures: [],
+
+    stations: STATIONS,
+    connections: CONNECTIONS,
+
+    async init() {
+      // run immediately
+      await this.load();
+
+      // avoid duplicate intervals
+      if (this._interval) return;
+
+      let that = this;
+      this._interval = setInterval(() => {
+        that.load();
+      }, 15000); // 15 seconds
+
+      //Reload Page every 24h
+      setTimeout(() => {
+        location.reload();
+        }, 24 * 60 * 10 * 1000);
+    }, 
+
+    async load() {
+        let dep = [];
+        let stations = Object.keys(this.stations);
+        for(let i = 0; i < stations.length; i++){
+            let station = stations[i];
+            const res = await fetch(
+              "https://transport.opendata.ch/v1/stationboard?id=" + station + "&limit=100"
+            )
+            const data = await res.json()
+            dep = dep.concat(data.stationboard);
+        }
+        dep = dep.sort((a, b) => new Date(a.stop.departure) - new Date(b.stop.departure));
+        let that = this;
+        dep = dep.filter((item) => {
+            let belongs = false;
+            for(let i = 0; i < that.connections.length; i++){
+                let connection = that.connections[i];
+                belongs = belongs || (item.stop.station.id == connection[0] && item.category == connection[1] && String(item.number) == String(connection[2]) && item.passList[1].station.id == connection[3] )
+            }
+            return belongs;
+        })
+        this.departures = dep;
+        console.log(this.departures);
+    },
+
+    formatTime(ts) {
+      return new Date(ts).toLocaleTimeString()
+    },
+
+    formatTimeLeft(ts) {
+        const diff = new Date(ts).getTime() - Date.now();
+
+        if (diff <= 0) return "0";
+
+        return String(Math.floor(diff / 60000));
+    },
+
+    shortenWords(text, maxWordLen = 4) {
+        return text
+            .trim()
+            .split(/\s+/)
+            .map(w => ABBREVIATIONS[w] || w)              // 1. apply dictionary
+            .slice(0, 2)                         // 2. max 2 words
+            .map(w => 
+            w.length > maxWordLen && !w.endsWith('.') // don't double-abbreviate
+                ? w.slice(0, maxWordLen) + "."
+                : w
+            )
+            .join("");
+        },
+
+    mounted() {
+      this.init()
+    }
+  }
+}
+</script>
+
+</body>
+</html>
