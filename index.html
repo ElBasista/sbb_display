@@ -165,8 +165,8 @@ function Stationboard() {
             const data = await res.json()
             dep = dep.concat(data.stationboard);
         }
-        dep = dep.sort((a, b) => new Date(a.stop.departure) - new Date(b.stop.departure));
         let that = this;
+        dep = dep.sort((a, b) => that.parseDate(a.stop.departure) - that.parseDate(b.stop.departure));
         dep = dep.filter((item) => {
             // Remove Things before TTS
             if (that.formatTimeLeft(item.stop.prognosis.departure) < that.tts) return false;
@@ -199,12 +199,12 @@ function Stationboard() {
 
     parseDate(ts) {
         if(!ts) return ts;
-        ts = ts.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+        ts = ts.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");//ios bugfix
         let date = new Date(ts);
         if (!!date){
             return date;
         }
-        alert("Parse Date Error");
+        console.error("Parse Date Error"); //for old browsers
         return NaN;
     },
 
