@@ -60,10 +60,10 @@
             {{ item.category }}{{ item.number }}
         </div>
         <div class="col-to">
-            {{ shortenWords(item.to) }} <span v-if="item.stop.platform">(Gl. {{ item.stop.platform }})</span>
+            {{ shortenWords(item.to) }}<span v-if="item.stop.platform">(Gl.{{ item.stop.platform }})</span>
         </div>
         <div class="col-when">
-            {{ formatTimeLeft(item.stop.departure) }}&rsquo;<span v-if="item.stop.delay > 0" class="delay">+{{ item.stop.delay }}&rsquo;</span>
+            {{ formatTimeLeft(item.stop.departure) }}&rsquo;<span v-if="item.stop.delay > 0" class="delay">+{{ formatDelay(item.stop.delay,item.stop.departure) }}&rsquo;</span>
         </div>
     </li>
   </ul>
@@ -155,6 +155,16 @@ function Stationboard() {
         const diff = new Date(ts).getTime() - Date.now();
         if (diff <= 0) return "0";
         return String(Math.floor(diff / 60000));
+    },
+
+    formatDelay(delay,departure) {
+        if (!delay) return delay;
+        const diff = new Date(departure).getTime() - Date.now();
+        if (diff >= 0) return delay;
+
+        let act_delay = delay + Math.floor(diff / 60000);
+        if (act_delay <= 0) return null;
+        return act_delay;
     },
 
     shortenWords(text, maxWordLen = 4) {
