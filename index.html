@@ -63,7 +63,7 @@
             {{ formatDestination(item.to) }}<span v-if="item.stop.platform">(Gl.{{ item.stop.platform }})</span>
         </div>
         <div class="col-when">
-            {{ formatTimeLeft(item.stop.departure) }}&rsquo;<span v-if="item.stop.delay > 0" class="delay">+{{ formatDelay(item.stop.delay,item.stop.departure) }}&rsquo;</span>
+            {{ formatTimeLeft(item.stop.departure) }}&rsquo;<span v-if="formatDelay(item.stop.delay,item.stop.departure)" class="delay">+{{ formatDelay(item.stop.delay,item.stop.departure) }}</span>
         </div>
     </li>
   </ul>
