@@ -197,16 +197,27 @@ function Stationboard() {
       return new Date(ts).toLocaleTimeString()
     },
 
+    parseDate(ts) {
+        let date = new Date(ts);
+        if (!!date){
+            return date;
+        }
+        alert("Parse Date Error");
+        return NaN;
+    },
+
     formatTimeLeft(ts) {
-        const diff = new Date(ts).getTime() - Date.now();
-        if (diff <= 0) return 0;
+        const date = this.parseDate(ts)
+        const diff = date.getTime() - Date.now();
+        if (isNaN(diff) || diff <= 0) return 0;
         return Math.floor(diff / 60000);
     },
 
-    formatDelay(delay,departure) {
+    formatDelay(delay, departure) {
         if (!delay) return delay;
-        const diff = new Date(departure).getTime() - Date.now();
-        if (diff >= 0) return delay;
+        const date = this.parseDate(departure)
+        const diff = date.getTime() - Date.now();
+        if (isNaN(diff) || diff >= 0) return delay;
 
         let act_delay = delay + Math.floor(diff / 60000);
         if (act_delay <= 0) return null;
