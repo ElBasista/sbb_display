@@ -198,6 +198,8 @@ function Stationboard() {
     },
 
     parseDate(ts) {
+        if(!ts) return ts;
+        ts = ts.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
         let date = new Date(ts);
         if (!!date){
             return date;
@@ -207,6 +209,7 @@ function Stationboard() {
     },
 
     formatTimeLeft(ts) {
+        if (!ts) return ts;
         const date = this.parseDate(ts)
         const diff = date.getTime() - Date.now();
         if (isNaN(diff) || diff <= 0) return 0;
