@@ -57,10 +57,10 @@
             {{stations[String(item.stop.station.id)]}}:
         </div>
         <div class="col-name">
-            {{ item.category }}{{ item.number }}
+            {{ formatName(item.category,item.number) }}
         </div>
         <div class="col-to">
-            {{ shortenWords(item.to) }}<span v-if="item.stop.platform">(Gl.{{ item.stop.platform }})</span>
+            {{ formatDestination(item.to) }}<span v-if="item.stop.platform">(Gl.{{ item.stop.platform }})</span>
         </div>
         <div class="col-when">
             {{ formatTimeLeft(item.stop.departure) }}&rsquo;<span v-if="item.stop.delay > 0" class="delay">+{{ formatDelay(item.stop.delay,item.stop.departure) }}&rsquo;</span>
@@ -147,6 +147,11 @@ function Stationboard() {
         console.log(this.departures);
     },
 
+    formatName(category, number){
+        if (category == "B" || category == "T") category = "";
+        return String(category) + String(number);
+    },
+
     formatTime(ts) {
       return new Date(ts).toLocaleTimeString()
     },
@@ -167,7 +172,7 @@ function Stationboard() {
         return act_delay;
     },
 
-    shortenWords(text, maxWordLen = 4) {
+    formatDestination(text, maxWordLen = 4) {
         return text
             .trim()
             .split(/\s+/)
