@@ -137,6 +137,7 @@ function Stationboard() {
         let that = this;
         dep = dep.filter((item) => {
             let belongs = false;
+            if (this.formatTimeLeft(item.stop.prognosis.departure) < 5) return false;
             for(let i = 0; i < that.connections.length; i++){
                 let connection = that.connections[i];
                 belongs = belongs || (item.stop.station.id == connection[0] && item.category == connection[1] && String(item.number) == String(connection[2]) && item.passList[1].station.id == connection[3] )
@@ -159,8 +160,8 @@ function Stationboard() {
 
     formatTimeLeft(ts) {
         const diff = new Date(ts).getTime() - Date.now();
-        if (diff <= 0) return "0";
-        return String(Math.floor(diff / 60000));
+        if (diff <= 0) return 0;
+        return Math.floor(diff / 60000);
     },
 
     formatDelay(delay,departure) {
