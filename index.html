@@ -11,7 +11,6 @@
 <style>
     body {
         background-color: black;
-        /*font-family: 'DotGothic16', monospace;*/
         font-family: 'Bitcount Single', monospace;
         font-weight: 400;
     }
@@ -72,19 +71,34 @@
 
 <script>
     
-//8503001 - Altstetten 
-//8591167 - Grünaustrasse
-//8591402 - Tüffenwies
-//8591434 - Winzerhalde
-//8503000 - Zürich HB
-//8503020 - Hardbrücke
 
+/*
+Change here what stations should be checked for their connections.
+Key: String (Transport Opendata Station ID https://transport.opendata.ch/v1/stationboard?id=...)
+Value: Custom Abbreviation for the Station (Note the layout will not work for abbreviations that are too long)
+
+Here are some examples
+8503001 - Altstetten 
+8591167 - Grünaustrasse
+8591402 - Tüffenwies
+8591434 - Winzerhalde
+8503000 - Zürich HB
+8503020 - Hardbrücke
+*/
 const STATIONS = {
     "8503001": "Alt", //Altstetten 
     "8591167": "Gr", //Grünaustrasse
     "8591402": "Tü"//Tüffenwies
 };
 
+/*
+Optional: Can be left as CONNECTIONS = []
+Array of Arrays: Inner array is constructed as follows
+0: String Station ID (https://transport.opendata.ch/v1/stationboard?id=...)
+1: String Category - S12 would be S, IR14 would be IR and so on...
+2: Number Number - S12 would be 12, IR14 would be 14 and so on...
+3: String Next Station ID - must be immediate next station!!! (https://transport.opendata.ch/v1/stationboard?id=...)
+*/
 //Station, Type, Number, Next Station
 const CONNECTIONS = [
     ["8591167","T", 17, "8591402"], //17er GS in direction HB
@@ -93,6 +107,11 @@ const CONNECTIONS = [
     ["8503001","S", 14, "8503000"], //S14 from Altstetten to HB / Hinwil ns:hb
 ];
 
+/*
+Here You can add custom Abbreviations for the display
+Key: String Word to be replaced
+Value: String Abbreviation (Note the layout will not work for abbreviations that are too long)
+*/
 const ABBREVIATIONS = {
   "Bahnhof": "Bhf",
   "Strasse": "Str",
@@ -100,13 +119,25 @@ const ABBREVIATIONS = {
   "Hauptbahnhof": "HB"
 };
 
+/*
+Optional: Can be set to 0 if not needed
+Time to station in minutes. This sets a threshhold any connection that leaves in less than tts minutes will not
+be shown (this uses the planned departure + delay)
+*/
+const TTS = 5 // hide anything leaving in less than 5 minutes
 
+
+
+/*
+Change this part on your own responsibility
+*/
 function Stationboard() {
   return {
     departures: [],
 
     stations: STATIONS,
     connections: CONNECTIONS,
+    tts: TTS,
 
     async init() {
       await this.load();
@@ -136,8 +167,15 @@ function Stationboard() {
         dep = dep.sort((a, b) => new Date(a.stop.departure) - new Date(b.stop.departure));
         let that = this;
         dep = dep.filter((item) => {
+            // Remove Things before TTS
+            if (that.formatTimeLeft(item.stop.prognosis.departure) < that.tts) return false;
+            
+            // Ignore if connections is [] or nonexistent
+            if (!that.connections) return true;
+            if (that.connections.length == 0) return true;
+
+            // Remove Items that are not in the connections array
             let belongs = false;
-            if (this.formatTimeLeft(item.stop.prognosis.departure) < 5) return false;
             for(let i = 0; i < that.connections.length; i++){
                 let connection = that.connections[i];
                 belongs = belongs || (item.stop.station.id == connection[0] && item.category == connection[1] && String(item.number) == String(connection[2]) && item.passList[1].station.id == connection[3] )
