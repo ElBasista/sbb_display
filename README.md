@@ -54,7 +54,7 @@ Filters which departures to show. Leave as `[]` to show everything.
 
 Each entry is an array of four values:
 
-```
+```js
 [stationId, category, number, nextStationId]
 ```
 
