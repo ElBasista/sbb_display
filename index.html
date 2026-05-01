@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Nicolas Adam</title>
+    <title>SBB</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Bitcount+Single:wght@400&display=swap" rel="stylesheet">
@@ -109,21 +109,17 @@ function Stationboard() {
     connections: CONNECTIONS,
 
     async init() {
-      // run immediately
       await this.load();
-
-      // avoid duplicate intervals
       if (this._interval) return;
 
       let that = this;
       this._interval = setInterval(() => {
         that.load();
-      }, 15000); // 15 seconds
+      }, 15 * 1000); // 15 seconds
 
-      //Reload Page every 24h
       setTimeout(() => {
         location.reload();
-        }, 24 * 60 * 10 * 1000);
+        }, 24 * 60 * 10 * 1000); //24h (page complete reload)
     }, 
 
     async load() {
@@ -157,9 +153,7 @@ function Stationboard() {
 
     formatTimeLeft(ts) {
         const diff = new Date(ts).getTime() - Date.now();
-
         if (diff <= 0) return "0";
-
         return String(Math.floor(diff / 60000));
     },
 
