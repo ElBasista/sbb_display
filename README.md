@@ -19,6 +19,15 @@ A minimal, single-file departure board for Swiss public transport — designed t
 
 ## Configuration
 
+### BASE
+
+First of all change this according to where this file sits in your website for the manifest to work.
+The manifest does not need to work for the tool to work.
+```html
+<base href="/sbb/">
+```
+
+
 All config lives at the top of the `<script>` block in `index.html`.
 
 ### `STATIONS`
