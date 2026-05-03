@@ -44,6 +44,9 @@
         border-bottom: none;
         margin-bottom:1%;
     }
+    .line3 {
+        grid-template-columns: 14% 1fr 25%;
+    }
     .line div {
         /*font-size:5cqw;*/
         font-size:5vw;
@@ -68,8 +71,8 @@
 <body>
 <div v-scope="Stationboard()"  v-effect="init()" v-cloak>
   <ul class="grid">
-    <li v-for="item in departures" class="line">
-        <div class="col-station">
+    <li v-for="item in departures" :class="['line',stations_ids.length === 1 && 'line3']">
+        <div class="col-station" v-if="stations_ids.length > 1">
             {{stations[String(item.stop.station.id)]}}:
         </div>
         <div class="col-name">
@@ -143,27 +146,33 @@ be shown (this uses the planned departure + delay)
 */
 const TTS = 4; // hide anything leaving in less than 4 minutes
 
-
+const REFRESH_INTERVAL = 30; //Refresh interval in seconds
 
 /*
 Change this part on your own responsibility
 */
+const p = new URLSearchParams(window.location.search);
+const _TTS = p.has("tts") ? p.get("tts") : TTS;
+const _STATIONS = p.has("station") ? {[String(p.get("station"))]: ""} : STATIONS;
 function Stationboard() {
   return {
     departures: [],
 
-    stations: STATIONS,
+    stations: _STATIONS,
+    stations_ids: Object.keys(_STATIONS),
     connections: CONNECTIONS,
-    tts: TTS,
+    tts: _TTS,
+    refresh_interval: REFRESH_INTERVAL,
 
     async init() {
       await this.load();
+      console.log(this.stations)
       if (this._interval) return;
 
       let that = this;
       this._interval = setInterval(() => {
         that.load();
-      }, 15 * 1000); // 15 seconds
+      }, this.refresh_interval * 1000); // 15 seconds
 
       setTimeout(() => {
         location.reload();
