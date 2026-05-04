@@ -146,9 +146,27 @@ be shown (this uses the planned departure + delay)
 */
 const TTS = 4; // hide anything leaving in less than 4 minutes
 
+/*
+Active time window for automatic updates.
+Format: [startHour, endHour] in 24h local time.
+The display will only refresh if the current hour satisfies:
+  hour >= startHour && hour < endHour
 
+Notes:
+- 24 is treated as midnight (i.e. effectively "until end of day").
+- Set to null (or undefined) to keep updates always active.
+- Uses the client’s local system time (no timezone conversion).
+*/
 const ACTIVE_TIME_INTERVAL = [5, 24]; //from 5:00 until 24:00 can be None for always active
 
+/*
+Refresh interval in seconds.
+Controls how often the display fetches new data.
+
+Important:
+- Lower values increase request frequency and may hit API rate limits (IP-based throttling).
+- Choose a reasonable value to balance freshness vs. network load.
+*/
 const REFRESH_INTERVAL = 30; //Refresh interval in seconds carefull when making lower, there is an ip based rationing
 
 /*
