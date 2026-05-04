@@ -146,7 +146,10 @@ be shown (this uses the planned departure + delay)
 */
 const TTS = 4; // hide anything leaving in less than 4 minutes
 
-const REFRESH_INTERVAL = 30; //Refresh interval in seconds
+
+const ACTIVE_TIME_INTERVAL = [5, 24]; //from 5:00 until 24:00 can be None for always active
+
+const REFRESH_INTERVAL = 30; //Refresh interval in seconds carefull when making lower, there is an ip based rationing
 
 /*
 Change this part on your own responsibility
@@ -163,6 +166,8 @@ function Stationboard() {
     connections: CONNECTIONS,
     tts: _TTS,
     refresh_interval: REFRESH_INTERVAL,
+    active_time_interval:ACTIVE_TIME_INTERVAL,
+    abbreviations:ABBREVIATIONS,
 
     async init() {
       await this.load();
@@ -171,7 +176,20 @@ function Stationboard() {
 
       let that = this;
       this._interval = setInterval(() => {
-        that.load();
+
+        if(!this.active_time_interval) {
+            that.load();
+            return
+        }
+        const now = new Date();
+        const hour = now.getHours(); // 0–23
+        if((hour >= this.active_time_interval[0] && hour < this.active_time_interval[1])){
+            that.load();
+            return
+        }
+        this.departures = [];
+        console.log("Inactive Time");
+        return
       }, this.refresh_interval * 1000); // 15 seconds
 
       setTimeout(() => {
@@ -256,7 +274,7 @@ function Stationboard() {
         return text
             .trim()
             .split(/\s+/)
-            .map(w => ABBREVIATIONS[w] || w)              // 1. apply dictionary
+            .map(w => this.abbreviations[w] || w)              // 1. apply dictionary
             .slice(0, 2)                         // 2. max 2 words
             .map(w => 
             w.length > maxWordLen && !w.endsWith('.') // don't double-abbreviate
