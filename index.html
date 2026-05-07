@@ -175,13 +175,14 @@ Change this part on your own responsibility
 const p = new URLSearchParams(window.location.search);
 const _TTS = p.has("tts") ? p.get("tts") : TTS;
 const _STATIONS = p.has("station") ? {[String(p.get("station"))]: ""} : STATIONS;
+const _CONNECTIONS = p.has("station") ? [] : CONNECTIONS;
 function Stationboard() {
   return {
     departures: [],
 
     stations: _STATIONS,
     stations_ids: Object.keys(_STATIONS),
-    connections: CONNECTIONS,
+    connections: _CONNECTIONS,
     tts: _TTS,
     refresh_interval: REFRESH_INTERVAL,
     active_time_interval:ACTIVE_TIME_INTERVAL,
@@ -217,7 +218,7 @@ function Stationboard() {
 
     async load() {
         let dep = [];
-        let stations = Object.keys(this.stations);
+        let stations = this.stations_ids;
         for(let i = 0; i < stations.length; i++){
             let station = stations[i];
             const res = await fetch(
