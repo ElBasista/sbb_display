@@ -104,11 +104,12 @@ Here are some examples
 8591434 - Winzerhalde
 8503000 - Zürich HB
 8503020 - Hardbrücke
+8506139 - Stein Am Rhein
 */
 const STATIONS = {
     "8503001": "Alt", //Altstetten 
     "8591167": "Gr", //Grünaustrasse
-    "8591402": "Tü"//Tüffenwies
+    "8591402": "Tü" //Tüffenwies
 };
 
 /*
@@ -174,10 +175,24 @@ const REFRESH_INTERVAL = 30; //Refresh interval in seconds carefull when making 
 /*
 Change this part on your own responsibility
 */
+let _TTS = TTS;
+let _STATIONS =  STATIONS;
+let _CONNECTIONS = CONNECTIONS;
+
+//Id as hash for ios pwa
+const hash = window.location.hash;
+const id = hash.slice(1);
+if (hash){
+    _TTS = 0;
+    _STATIONS =  {[String(id)]: ""};
+    _CONNECTIONS = [];
+}
+//Query Parameters
 const p = new URLSearchParams(window.location.search);
-const _TTS = p.has("tts") ? p.get("tts") : TTS;
-const _STATIONS = p.has("station") ? {[String(p.get("station"))]: ""} : STATIONS;
-const _CONNECTIONS = p.has("station") ? [] : CONNECTIONS;
+_TTS = p.has("tts") ? p.get("tts") : _TTS;
+_STATIONS = p.has("station") ? {[String(p.get("station"))]: ""} : _STATIONS;
+_CONNECTIONS = p.has("station") ? [] : _CONNECTIONS;
+
 function Stationboard() {
   return {
     departures: [],
