@@ -1,7 +1,6 @@
 {
   "name": "SBB Display",
   "short_name": "SBB",
-  "start_url": "./index.html",
   "display": "standalone",
   "fullscreen": true,
   "background_color": "#000000",
