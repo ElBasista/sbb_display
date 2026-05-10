@@ -185,6 +185,20 @@ Quick overrides via query params:
 
 ---
 
+## Hash override (iOS PWA workaround)
+```
+#8503000
+```
+If a hash is present:
+
+the hash value is used as the station ID
+tts is forced to 0
+connections are disabled
+
+This is mainly useful for iOS home screen PWAs, because Safari may strip query parameters from saved home screen links.
+
+---
+
 ## Data Source
 
 ```
