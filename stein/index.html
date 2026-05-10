@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>SBB</title>
+    <base href="/sbb/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
+    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Single:wght@400&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.webmanifest">
+
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SBB">
+
+    <!-- Icons (EXTREM wichtig für iOS) -->
+    <!--<link rel="apple-touch-icon" href="/icon-192.png">-->
+
+    <!-- Optional aber hilfreich -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+</head>
+<script src="https://unpkg.com/petite-vue" defer init></script>
+<style>
+    body {
+        background-color: #000000;
+        font-family: 'Bitcount Single', monospace;
+        font-weight: 400;
+        margin:0;
+        padding:0;
+    }
+
+    .grid {
+        margin:1vw;
+        padding:0;
+        color:lightgreen;
+    }
+    .line {
+        width:100%;
+        display: grid;
+        container-type: inline-size;
+        grid-template-columns: 13% 14% 1fr 25%;
+        border-bottom: none;
+        margin-bottom:1%;
+    }
+    .line3 {
+        grid-template-columns: 14% 1fr 25%;
+    }
+    .line div {
+        /*font-size:5cqw;*/
+        font-size:5vw;
+        overflow: hidden;
+    }
+    .delay {
+        color:red;
+    }
+
+    .col-when {
+        text-align: right;
+        white-space: nowrap;
+        overflow: visible;
+    }
+    [v-cloak] {
+        visibility: hidden;
+    }
+
+</style>
+
+
+<body>
+<div v-scope="Stationboard()"  v-effect="init()" v-cloak>
+  <ul class="grid">
+    <li v-for="item in departures" :class="['line',stations_ids.length === 1 && 'line3']">
+        <div class="col-station" v-if="stations_ids.length > 1">
+            {{stations[String(item.stop.station.id)]}}:
+        </div>
+        <div class="col-name">
+            {{ formatName(item.category,item.number) }}
+        </div>
+        <div class="col-to">
+            {{ formatDestination(item.to) }}<span v-if="item.stop.platform">(Gl.{{ item.stop.platform }})</span>
+        </div>
+        <div class="col-when">
+            {{ formatTimeLeft(item.stop.departure) }}&rsquo;<span v-if="formatDelay(item.stop.delay,item.stop.departure)" class="delay">+{{ formatDelay(item.stop.delay,item.stop.departure) }}</span>
+        </div>
+    </li>
+  </ul>
+</div>
+
+
+<script>
+    
+
+/*
+Change here what stations should be checked for their connections.
+Key: String (Transport Opendata Station ID https://transport.opendata.ch/v1/stationboard?id=...)
+Value: Custom Abbreviation for the Station (Note the layout will not work for abbreviations that are too long)
+
+Here are some examples
+8503001 - Altstetten 
+8591167 - Grünaustrasse
+8591402 - Tüffenwies
+8591434 - Winzerhalde
+8503000 - Zürich HB
+8503020 - Hardbrücke
+8506139 - Stein Am Rhein
+*/
+const STATIONS = {
+    "8506139": "Stein"
+};
+
+/*
+Optional: Can be left as CONNECTIONS = []
+Array of Arrays: Inner array is constructed as follows
+0: String Station ID (https://transport.opendata.ch/v1/stationboard?id=...)
+1: String Category - S12 would be S, IR14 would be IR and so on...
+2: Number Number - S12 would be 12, IR14 would be 14 and so on...
+3: String Next Station ID - must be immediate next station!!! (https://transport.opendata.ch/v1/stationboard?id=...)
+*/
+//Station, Type, Number, Next Station
+const CONNECTIONS = [];
+
+/*
+Here You can add custom Abbreviations for the display
+Key: String Word to be replaced
+Value: String Abbreviation (Note the layout will not work for abbreviations that are too long)
+*/
+const ABBREVIATIONS = {
+  "Bahnhof": "Bhf",
+  "Strasse": "Str",
+  "Zentrum": "Zentr",
+  "Hauptbahnhof": "HB"
+};
+
+/*
+Optional: Can be set to 0 if not needed
+Time to station in minutes. This sets a threshhold any connection that leaves in less than tts minutes will not
+be shown (this uses the planned departure + delay)
+*/
+const TTS = 0; // hide anything leaving in less than 4 minutes
+
+/*
+Active time window for automatic updates.
+Format: [startHour, endHour] in 24h local time.
+The display will only refresh if the current hour satisfies:
+  hour >= startHour && hour < endHour
+
+Notes:
+- 24 is treated as midnight (i.e. effectively "until end of day").
+- Set to null (or undefined) to keep updates always active.
+- Uses the client’s local system time (no timezone conversion).
+*/
+const ACTIVE_TIME_INTERVAL = [5, 24]; //from 5:00 until 24:00 can be None for always active
+
+/*
+Refresh interval in seconds.
+Controls how often the display fetches new data.
+
+Important:
+- Lower values increase request frequency and may hit API rate limits (IP-based throttling).
+- Choose a reasonable value to balance freshness vs. network load.
+*/
+const REFRESH_INTERVAL = 30; //Refresh interval in seconds carefull when making lower, there is an ip based rationing
+
+/*
+Change this part on your own responsibility
+*/
+let _TTS = TTS;
+let _STATIONS =  STATIONS;
+let _CONNECTIONS = CONNECTIONS;
+
+//Id as hash for ios pwa
+const hash = window.location.hash;
+const id = hash.slice(1);
+if (hash){
+    _TTS = 0;
+    _STATIONS =  {[String(id)]: ""};
+    _CONNECTIONS = [];
+}
+//Query Parameters
+const p = new URLSearchParams(window.location.search);
+_TTS = p.has("tts") ? p.get("tts") : _TTS;
+_STATIONS = p.has("station") ? {[String(p.get("station"))]: ""} : _STATIONS;
+_CONNECTIONS = p.has("station") ? [] : _CONNECTIONS;
+
+function Stationboard() {
+  return {
+    departures: [],
+
+    stations: _STATIONS,
+    stations_ids: Object.keys(_STATIONS),
+    connections: _CONNECTIONS,
+    tts: _TTS,
+    refresh_interval: REFRESH_INTERVAL,
+    active_time_interval:ACTIVE_TIME_INTERVAL,
+    abbreviations:ABBREVIATIONS,
+
+    async init() {
+      await this.load();
+      console.log(this.stations)
+      if (this._interval) return;
+
+      let that = this;
+      this._interval = setInterval(() => {
+
+        if(!this.active_time_interval) {
+            that.load();
+            return
+        }
+        const now = new Date();
+        const hour = now.getHours(); // 0–23
+        if((hour >= this.active_time_interval[0] && hour < this.active_time_interval[1])){
+            that.load();
+            return
+        }
+        this.departures = [];
+        console.log("Inactive Time");
+        return
+      }, this.refresh_interval * 1000); // 15 seconds
+
+      setTimeout(() => {
+        location.reload();
+        }, 24 * 60 * 10 * 1000); //24h (page complete reload)
+    }, 
+
+    async load() {
+        let dep = [];
+        let stations = this.stations_ids;
+        for(let i = 0; i < stations.length; i++){
+            let station = stations[i];
+            const res = await fetch(
+              "https://transport.opendata.ch/v1/stationboard?id=" + station + "&limit=100"
+            )
+            const data = await res.json()
+            dep = dep.concat(data.stationboard);
+        }
+        let that = this;
+        dep = dep.sort((a, b) => that.parseDate(a.stop.departure) - that.parseDate(b.stop.departure));
+        dep = dep.filter((item) => {
+            // Remove Things before TTS
+            if (that.formatTimeLeft(item.stop.prognosis.departure) < that.tts) return false;
+            
+            // Ignore if connections is [] or nonexistent
+            if (!that.connections) return true;
+            if (that.connections.length == 0) return true;
+
+            // Remove Items that are not in the connections array
+            let belongs = false;
+            for(let i = 0; i < that.connections.length; i++){
+                let connection = that.connections[i];
+                belongs = belongs || (item.stop.station.id == connection[0] && item.category == connection[1] && String(item.number) == String(connection[2]) && item.passList[1].station.id == connection[3] )
+            }
+            return belongs;
+        })
+        dep = dep.slice(0,18);
+        this.departures = dep;
+        console.log(this.departures);
+    },
+
+    formatName(category, number){
+        if (category == "B" || category == "T") category = "";
+        return String(category) + String(number);
+    },
+
+    formatTime(ts) {
+      return new Date(ts).toLocaleTimeString()
+    },
+
+    parseDate(ts) {
+        if(!ts) return ts;
+        ts = ts.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");//ios bugfix
+        let date = new Date(ts);
+        if (!!date){
+            return date;
+        }
+        console.error("Parse Date Error"); //for old browsers
+        return NaN;
+    },
+
+    formatTimeLeft(ts) {
+        if (!ts) return ts;
+        const date = this.parseDate(ts)
+        const diff = date.getTime() - Date.now();
+        if (isNaN(diff) || diff <= 0) return 0;
+        return Math.floor(diff / 60000);
+    },
+
+    formatDelay(delay, departure) {
+        if (!delay) return delay;
+        const date = this.parseDate(departure)
+        const diff = date.getTime() - Date.now();
+        if (isNaN(diff) || diff >= 0) return delay;
+
+        let act_delay = delay + Math.floor(diff / 60000);
+        if (act_delay <= 0) return null;
+        return act_delay;
+    },
+
+    formatDestination(text, maxWordLen = 4) {
+        return text
+            .trim()
+            .split(/\s+/)
+            .map(w => this.abbreviations[w] || w)              // 1. apply dictionary
+            .slice(0, 2)                         // 2. max 2 words
+            .map(w => 
+            w.length > maxWordLen && !w.endsWith('.') // don't double-abbreviate
+                ? w.slice(0, maxWordLen) + "."
+                : w
+            )
+            .join("");
+        },
+
+    mounted() {
+      this.init()
+    }
+  }
+}
+</script>
+
+</body>
+</html>
